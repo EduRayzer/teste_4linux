@@ -36,7 +36,7 @@ deploy:
     - app-sgoncalves
   image: bitnami/kubectl:latest
   script:
-    - kubectl config set-cluster k3s --server=https://<k3s-server-url>:6443 --certificate-authority=/root/.kube/ca.crt
+    - kubectl config set-cluster k3s --server=https://34.19.72.63:6443 --certificate-authority=/root/.kube/ca.crt
     - kubectl config set-credentials deployer --token=${K8S_TOKEN}
     - kubectl config set-context k3s-context --cluster=k3s --user=deployer --namespace=default
     - kubectl config use-context k3s-context
