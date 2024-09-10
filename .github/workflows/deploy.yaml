@@ -1,0 +1,77 @@
+name: Coffee Shop CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install dependencies and lint
+        run: |
+          npm install eslint eslint-config-standard-with-typescript eslint-plugin-import eslint-plugin-node eslint-plugin-promise typescript@4.4.2 @typescript-eslint/eslint-plugin @typescript-eslint/parser
+          npm run lint
+
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Run Horusec analysis
+        run: |
+          curl -fsSL https://horusec.io/bin/install.sh | bash
+          horusec start -p . -a ${{ secrets.HORUSEC_API_KEY }} -u http://devsecops.labs.devsecops:8000 --enable-commit-author --enable-git-history=true --enable-owasp-dependency-check
+        env:
+          HORUSEC_API_KEY: ${{ secrets.HORUSEC_API_KEY }}
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t coffee-shop:latest .
+
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up kubectl
+        run: |
+          curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin/kubectl
+
+      - name: Set up Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl config set-cluster k3s --server=https://34.19.72.63:6443 --certificate-authority=${{ secrets.CA_CERT }}
+          kubectl config set-credentials deployer --token=${{ secrets.K8S_TOKEN }}
+          kubectl config set-context k3s-context --cluster=k3s --user=deployer --namespace=default
+          kubectl config use-context k3s-context
+          kubectl apply -f deployment.yaml
