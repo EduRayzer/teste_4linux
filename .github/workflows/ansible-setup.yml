@@ -17,6 +17,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.CHAVE_SSH }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+      
 
       - name: Install Ansible
         run: |
@@ -25,4 +27,4 @@ jobs:
 
       - name: Run Ansible Playbook
         run: |
-          ansible-playbook -i cluster/hosts.ini cluster/install_k3s.yml -vvv
+          ansible-playbook -i cluster/hosts.ini cluster/install_k3s.yml
