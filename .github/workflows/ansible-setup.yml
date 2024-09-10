@@ -13,9 +13,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.5.3
-        with:
-          ssh-private-key: ${{ secrets.CHAVE_SSH }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CHAVE_SSH }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
 
       - name: Install Ansible
         run: |
@@ -24,4 +25,4 @@ jobs:
 
       - name: Run Ansible Playbook
         run: |
-          ansible-playbook -i cluster/hosts.ini cluster/install_k3s.yml
+          ansible-playbook -i cluster/hosts.ini cluster/install_k3s.yml -vvv
