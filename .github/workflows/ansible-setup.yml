@@ -24,4 +24,4 @@ jobs:
 
       - name: Run Ansible Playbook
         run: |
-          ansible-playbook -i cluster/host.ini cluster/install_k3s.yml
+          ansible-playbook -i cluster/hosts.ini cluster/install_k3s.yml
