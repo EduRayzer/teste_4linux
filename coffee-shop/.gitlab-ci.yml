@@ -1,0 +1,45 @@
+stages:
+  - Validate project
+  - SAST & SCA
+  - Build and Push Docker Image
+  - Deploy on Kubernetes
+
+lint:
+  stage: Validate project
+  tags:
+    - app-sgoncalves
+  script:
+    - npm install eslint eslint-config-standard-with-typescript eslint-plugin-import eslint-plugin-node eslint-plugin-promise typescript@4.4.2 @typescript-eslint/eslint-plugin @typescript-eslint/parser
+    - npm run lint
+
+sast:
+  stage: SAST & SCA
+  tags:
+    - app-sgoncalves
+  script:
+    - '/usr/local/bin/horusec start -p . -a ${HORUSEC_API_KEY} -u http://devsecops.labs.devsecops:8000 --enable-commit-author --enable-git-history=true --enable-owasp-dependency-check'
+
+build:
+  stage: Build and Push Docker Image
+  tags:
+    - app-sgoncalves
+  services:
+    - docker:latest
+  script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD}
+    - docker build -t ${CI_REGISTRY_USER}/coffee-shop:latest .
+    - docker push ${CI_REGISTRY_USER}/coffee-shop:latest
+
+deploy:
+  stage: Deploy on Kubernetes
+  tags:
+    - app-sgoncalves
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl config set-cluster k3s --server=https://<k3s-server-url>:6443 --certificate-authority=/root/.kube/ca.crt
+    - kubectl config set-credentials deployer --token=${K8S_TOKEN}
+    - kubectl config set-context k3s-context --cluster=k3s --user=deployer --namespace=default
+    - kubectl config use-context k3s-context
+    - kubectl apply -f deployment.yaml
+  only:
+    - main

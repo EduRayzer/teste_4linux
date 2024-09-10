@@ -1,0 +1,20 @@
+---
+- hosts: k3s-master
+  become: yes
+  tasks:
+    - name: Instalar K3s no nó master
+      shell: curl -sfL https://get.k3s.io | sh -
+
+    - name: Salvar token do K3s
+      shell: cat /var/lib/rancher/k3s/server/node-token
+      register: k3s_token
+
+    - name: Obter IP do master
+      shell: hostname -I | awk '{print $1}'
+      register: master_ip
+
+- hosts: k3s-workers
+  become: yes
+  tasks:
+    - name: Instalar K3s nos nós workers
+      shell: curl -sfL https://get.k3s.io | K3S_URL=https://{{ hostvars['node-01'].master_ip.stdout }}:6443 K3S_TOKEN={{ hostvars['node-01'].k3s_token.stdout }} sh -
